@@ -3,6 +3,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <List.hpp>
+#include "Utilities.cpp"
 
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -10,6 +11,12 @@
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+//Sensors 
+int sensitivity = 20;
+
+//Button board
+const int keyboardPin = A8;
 
 //Group A
 const int buzzerPinA = 4;
@@ -448,6 +455,7 @@ Flasher flasherA2(ledPinA2a, 100, 100);
 Light lightA2(ledPinA2b);
 Target *targetA2 = new Target("target-B-1", ldrPinA2, potPin, lightA2, flasherA2, buzzerA, 1000);
 
+ButtonBoard * board;
 
 //Group B config
 // Buzzer buzzerB(buzzerPinB, 300, 1700);
@@ -460,20 +468,22 @@ Target *targetA2 = new Target("target-B-1", ldrPinA2, potPin, lightA2, flasherA2
 String game_idx = game_random_infinite;
 int finitDurationdMsIn = 5000l;
 
-List<Target *> targetsA;
-
-
 
 
 TargetGroup * targetGroupA;
 
+void configure(Key &key) {
+	if(key == up) {
+		sensitivity+=2;
+	} else if(key == down) {
+		sensitivity-=2;
+	}// else if(key == )
+}
 
 
 void setup() {
 	Serial.begin(9600);
 	Serial.println("LaserGame " + game_idx + " initialization.");
-
-	//Serial.begin(115200);
 
 	if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
 		Serial.println(F("SSD1306 allocation failed"));
@@ -483,6 +493,8 @@ void setup() {
 	delay(2000);
 	display.clearDisplay();
 	display.display();
+	
+	List<Target *> targetsA;
 	targetsA.add(targetA1);
 	targetsA.add(targetA2);
 	targetGroupA = new TargetGroup("Group-A", targetsA, game_idx, finitDurationdMsIn);
@@ -494,6 +506,14 @@ void setup() {
 //	targetGroup2.targets.add(target2);
 
 	Serial.println("Initialized targets");
+
+
+
+board = new ButtonBoard(keyboardPin, [](Key k)-> void {
+  configure(k);
+  
+});
+
 	//targetGroup1.print();
 	//targets1.get(0.arm();
 //	targetA1->arm();
@@ -532,6 +552,7 @@ void loop() {
 	//targetA2->Update();
 	
 	targetGroupA->update();
+	board->update();
 	
 	//targetGroup2.update();
 	display.clearDisplay();
@@ -540,14 +561,14 @@ void loop() {
 	display.setTextColor(WHITE);
 	display.setCursor(0, 5);
 	// Display static text
-	int sensitivity = 20;//analogRead(potPin);
+	//analogRead(potPin);
 	display.println((String) "Sensitivity: " + sensitivity);
 	display.setCursor(0, 15);
 	display.println("Game: " + game_idx);
 	display.setCursor(0, 30);
-	// display.println(
-	// 		(String) "A: " + targetGroupA->score() + " B: "
-	// 				+ targetGroupB->score());
+	display.println(
+			(String) "A: " + targetGroupA->score() + " B: "
+					+ targetGroupB->score());
 	display.display();
 //
 //	//TODO: reset
