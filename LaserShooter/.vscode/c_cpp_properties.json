@@ -24,6 +24,7 @@
                 "/Applications/Arduino.app/Contents/Java/hardware/arduino/avr/libraries/SPI/src",
                 "/Users/urs/Documents/Arduino/libraries/Adafruit_SSD1306",
                 "/Users/urs/Documents/Arduino/libraries/List/src",
+                "/Users/urs/Documents/Arduino/libraries/MemoryUsage/src",
                 "/Users/urs/Documents/Arduino/libraries/AUnit/src",
                 "/Applications/Arduino.app/Contents/Java/hardware/tools/avr/lib/gcc/avr/7.3.0/include",
                 "/Applications/Arduino.app/Contents/Java/hardware/tools/avr/lib/gcc/avr/7.3.0/include-fixed",

@@ -4,7 +4,7 @@
 #include <Adafruit_SSD1306.h>
 #include <List.hpp>
 #include "Utilities.cpp"
-
+#include <MemoryUsage.h>
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
@@ -12,13 +12,15 @@
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-//Sensors 
+// General settings
 int sensitivity = 20;
+long finitDurationdMs = 5000;
+int game_idx = 0;
 
-//Button board
+// Button board
 const int keyboardPin = A8;
 
-//Group A
+// Group A
 const int buzzerPinA = 4;
 
 const int ldrPinA1 = A1;
@@ -33,73 +35,80 @@ const int ldrPinA3 = A3;
 const int ledPinA3a = 26;
 const int ledPinA3b = 27;
 
-
-
-//Group B
+// Group B
 const int buzzerPinB = 7;
 
 const int ldrPinB1 = A3;
 const int ledPinB1a = 32;
 const int ledPinB1b = 33;
 
-
-
 const int potPin = A0;
 
-//const int laserPin = 7;
+// const int laserPin = 7;
 
-
-class Light {
-	int pin;      // the number of the LED pin
-	boolean active; //active or not
-	int ledState;  // ledState used to set the LED
+class Light
+{
+	int pin;		// the number of the LED pin
+	boolean active; // active or not
+	int ledState;	// ledState used to set the LED
 
 public:
-	Light() {
+	Light()
+	{
 	}
-	public:Light(int pin_) {
+
+public:
+	Light(int pin_)
+	{
 		pin = pin_;
 		ledState = LOW;
 		active = false;
 		pinMode(pin, OUTPUT);
 	}
 
-	void toggleActive() {
+	void toggleActive()
+	{
 		active = !active;
 	}
-	void activate() {
+	void activate()
+	{
 		active = true;
 	}
 
-	void deactivate() {
+	void deactivate()
+	{
 		active = false;
 	}
 
-	void update() {
+	void update()
+	{
 		ledState = active ? HIGH : LOW;
 		digitalWrite(pin, ledState);
 	}
 };
 
-class Flasher {
+class Flasher
+{
 	// Class Member Variables
 	// These are initialized at startup
-	int pin;      // the number of the LED pin
-	long onMs;     // milliseconds of on-time
-	long offMs;    // milliseconds of off-time
-	boolean active; //active or not
+	int pin;		// the number of the LED pin
+	long onMs;		// milliseconds of on-time
+	long offMs;		// milliseconds of off-time
+	boolean active; // active or not
 
 	// These maintain the current state
-	int ledState;                 // ledState used to set the LED
-	unsigned long previousMs;   // will store last time LED was updated
+	int ledState;			  // ledState used to set the LED
+	unsigned long previousMs; // will store last time LED was updated
 
 public:
-	Flasher() {
+	Flasher()
+	{
 	}
 	// Constructor - creates a Flasher
 	// and initializes the member variables and state
 public:
-	Flasher(int pin_, long onMs_, long offMs_) {
+	Flasher(int pin_, long onMs_, long offMs_)
+	{
 		pin = pin_;
 		onMs = onMs_;
 		offMs = offMs_;
@@ -109,54 +118,64 @@ public:
 		pinMode(pin, OUTPUT);
 	}
 
-	void toggleActive() {
+	void toggleActive()
+	{
 		active = !active;
 	}
-	void activate() {
+	void activate()
+	{
 		active = true;
 	}
 
-	void deactivate() {
+	void deactivate()
+	{
 		active = false;
 	}
 
-
-	void update() {
+	void update()
+	{
 		// check to see if it's time to change the state of the LED
 		unsigned long currentMs = millis();
-		if (active) {
-			if ((ledState == HIGH)
-					&& (currentMs - previousMs >= onMs)) {
-				ledState = LOW;  // Turn it off
-				previousMs = currentMs;  // Remember the time
-				digitalWrite(pin, ledState);  // Update the actual LED
-			} else if ((ledState == LOW)
-					&& (currentMs - previousMs >= offMs)) {
-				ledState = HIGH;  // turn it on
-				previousMs = currentMs;   // Remember the time
-				digitalWrite(pin, ledState);   // Update the actual LED
+		if (active)
+		{
+			if ((ledState == HIGH) && (currentMs - previousMs >= onMs))
+			{
+				ledState = LOW;				 // Turn it off
+				previousMs = currentMs;		 // Remember the time
+				digitalWrite(pin, ledState); // Update the actual LED
 			}
-		} else {
+			else if ((ledState == LOW) && (currentMs - previousMs >= offMs))
+			{
+				ledState = HIGH;			 // turn it on
+				previousMs = currentMs;		 // Remember the time
+				digitalWrite(pin, ledState); // Update the actual LED
+			}
+		}
+		else
+		{
 			previousMs = currentMs;
 			digitalWrite(pin, LOW);
 		}
 	}
 };
 
-class Buzzer {
+class Buzzer
+{
 	// These are initialized at startup
-	int pin;      // the number of the Buzzer pin
-	long soundMs;     // milliseconds sound buzzer for give frequency
-	boolean active; //active or not
+	int pin;		// the number of the Buzzer pin
+	long soundMs;	// milliseconds sound buzzer for give frequency
+	boolean active; // active or not
 	long frequency;
-	unsigned long activatedMillis;   // will store last time Buzzer was updated
+	unsigned long activatedMillis; // will store last time Buzzer was updated
 
 public:
-	Buzzer() {
+	Buzzer()
+	{
 	}
 
 public:
-	Buzzer(int pin_, long soundMs_, int frequency_) {
+	Buzzer(int pin_, long soundMs_, int frequency_)
+	{
 		pin = pin_;
 		pinMode(pin, OUTPUT);
 		active = false;
@@ -165,57 +184,69 @@ public:
 		activatedMillis = 0;
 	}
 
-	void activate() {
+	void activate()
+	{
 		active = true;
 		activatedMillis = millis();
 	}
 
-	void deactivate() {
+	void deactivate()
+	{
 		active = false;
 		activatedMillis = 0;
 	}
 
-	void update() {
+	void update()
+	{
 		// check to see if it's time to change the state of the LED
-		//Serial.println((String)"buzzer active?: " + active);
+		// Serial.println((String)"buzzer active?: " + active);
 		unsigned long currentMillis = millis();
-		if (active) {
-			//exceeded sound ms
-			if (((currentMillis - activatedMillis) >= soundMs)) {
+		if (active)
+		{
+			// exceeded sound ms
+			if (((currentMillis - activatedMillis) >= soundMs))
+			{
 				noTone(pin);
 				deactivate();
-			} else {
+			}
+			else
+			{
 				tone(pin, frequency);
 			}
 		}
 	}
 };
 
-class Target {
+class Target
+{
 	int ldrPin;
 	int sensitivityPin;
+
 public:
 	String id;
 	int hitCount;
 	Light light;
 	Flasher flasher;
 	Buzzer buzzer;
-	long durationMs;     // milliseconds of on-time
-	boolean isHit; //isHit or not
-	boolean isArmed; //is target selected or not
+	long durationMs; // milliseconds of on-time
+	boolean isHit;	 // isHit or not
+	boolean isArmed; // is target selected or not
 
 	// These maintain the current state
-	unsigned long previousMs;   // will store last time Target was updated
+	unsigned long previousMs; // will store last time Target was updated
 
 public:
-	Target() {
+	Target()
+	{
 	}
+
 public:
-	Target(String id_, int pin_, int sensitivityPin_, Light light_, Flasher flash_,
-			Buzzer buzzer_, long durationMs_) {
+	Target(String id_, int pin_, int &sensitivity_, Light light_, Flasher flash_,
+		   Buzzer buzzer_, long durationMs_)
+	{
 		id = id_;
 		ldrPin = pin_;
-		sensitivityPin = sensitivityPin_;
+		sensitivity = sensitivity_;
 		buzzer = buzzer_;
 		flasher = flash_;
 		light = light_;
@@ -227,56 +258,74 @@ public:
 		pinMode(ldrPin, INPUT);
 	}
 
-	void arm() {
+	void arm()
+	{
 		isArmed = true;
 		light.activate();
 		flasher.deactivate();
 		Serial.print("Target: ");
 		Serial.print((String)id);
 		Serial.println(" armed!!!");
-
 	}
 
-	void unarm() {
+	void unarm()
+	{
 		isArmed = false;
 		light.deactivate();
+		light.update();
 		flasher.deactivate();
+			Serial.print("Target: ");
+		Serial.print((String)id);
+		Serial.println(" unarmed!!!");
 	}
 
-	boolean isIdle() {
+	boolean isIdle()
+	{
 		return !isHit && !isArmed;
 	}
 
+	void reset() {
+		Serial.println("Reset Target: " + (String)id);
+		hitCount = 0;
+		unarm();
+	}
 
-	void Update() {
+	void Update()
+	{
 
 		unsigned long currentMs = millis();
-		//Serial.print("Update Target: ");
-//							Serial.print((String)id);
-//							Serial.println( isArmed);
+		// Serial.print("Update Target: ");
+		// 							Serial.print((String)id);
+		// 							Serial.println(" armed: " +  isArmed);
 
-		if (isArmed && id != "") {
-			if (isHit) {
-				//Serial.println((String)"timing: " + (currentMs - previousMs) + " " + durationMs);
-				if ((currentMs - previousMs) >= durationMs) {
+		if (isArmed)
+		{
+			if (isHit)
+			{
+				// Serial.println((String)"timing: " + (currentMs - previousMs) + " " + durationMs);
+				if ((currentMs - previousMs) >= durationMs)
+				{
 					Serial.print("Target: ");
 					Serial.print((String)id);
-					Serial.println( " deactivated");
-					//Serial.println(" deactivated");
+					Serial.println(" deactivated");
+					// Serial.println(" deactivated");
 					flasher.deactivate();
 					light.deactivate();
-					//buzzer.Deactivate();
+					// buzzer.Deactivate();
 					isHit = false;
 					isArmed = false;
-					previousMs = 0;  //Reset time
+					previousMs = 0; // Reset time
 				}
-			} else {
-				int sensitivity = 20;//analogRead(sensitivityPin);
+			}
+			else
+			{
+				//				int sensitivity = 20;//analogRead(sensitivityPin);
 				int ldrStatus = analogRead(ldrPin);
-				//Serial.println((String) "" + id + ": Sensitity: " + (sensitivity)				+ " ldr: " + ldrStatus);
+				// Serial.println((String) "" + id + ": Sensitity: " + (sensitivity)				+ " ldr: " + ldrStatus);
 
-				//low ldr = hit
-				if (ldrStatus < sensitivity) {
+				// low ldr = hit
+				if (ldrStatus < sensitivity)
+				{
 					hitCount++;
 					light.deactivate();
 					flasher.activate();
@@ -284,51 +333,52 @@ public:
 					isHit = true;
 					Serial.print("Target: ");
 					Serial.print((String)id);
-					Serial.print( " Hit: ");
+					Serial.print(" Hit: ");
 					Serial.println((String)hitCount);
-					previousMs = currentMs;  // Remember the time
+					previousMs = currentMs; // Remember the time
 				}
-
 			}
 			light.update();
 			flasher.update();
 			buzzer.update();
 		}
-
 	}
 };
 
-//Games
-//random target selection selected till hit
-const String game_random_infinite = "random_infinite";
-//random target selection selected for limited amount of time
-const String game_random_finite = "random_finite";
-//incremental target selection selected till hit
-const String game_incremental_infinite = "incremental_infinite";
-//incremental target selection selected for limited amount of time
-const String game_incremental_finite = "incremental_finite";
-//select all targets at once, reselect all when all hit
-const String game_all_together = "all_together";
+// Games
+// random target selection selected till hit
+const String game_random_infinite = "rn";
+// random target selection selected for limited amount of time
+const String game_random_finite = "rn_lmt";
+// incremental target selection selected till hit
+const String game_incremental_infinite = "inc";
+// incremental target selection selected for limited amount of time
+const String game_incremental_finite = "inc_lmt";
+// select all targets at once, reselect all when all hit
+const String game_all_together = "all";
 
+const String gameModes[5] = {game_random_infinite, game_random_finite, game_incremental_infinite, game_incremental_finite, game_all_together};
 /**
  * Represents a group of targets, which participate in a game
  */
 
-class TargetGroup {
+class TargetGroup
+{
 
 public:
 	List<Target *> targets;
 	int lastTargetIdx = -1;
 	String groupId;
-	String gameId;
-	long durationMs;     // milliseconds of on-time
-	unsigned long previousMs;   // will store last time Target was updated
+	int gameId;
+	long durationMs;		  // milliseconds of on-time
+	unsigned long previousMs; // will store last time Target was updated
 
 public:
-	TargetGroup(String groupId_, const List<Target *> &targets_, String &gameId_, long duartionMs_) {
-//		for (int i = 0; i <= sizeof(targets_); i++) {
-//			targets.add(targets_[i]);
-//		}
+	TargetGroup(String groupId_, const List<Target *> &targets_, int &gameId_, long &duartionMs_)
+	{
+		//		for (int i = 0; i <= sizeof(targets_); i++) {
+		//			targets.add(targets_[i]);
+		//		}
 		targets = targets_;
 		gameId = gameId_;
 		groupId = groupId_;
@@ -337,10 +387,14 @@ public:
 	}
 
 private:
-	boolean allIdle() {
-		for (int i = 0; i < targets.getSize(); i++) {
-			if (!targets.getValue(i)->isIdle()) {
-				//Serial.println("Target " + (String)i + " still armed");
+	boolean allIdle()
+	{
+//		Serial.println("Group " + groupId + " allIdle: count " + (String)targets.getSize());
+		for (int i = 0; i < targets.getSize(); i++)
+		{
+			if (!targets.getValue(i)->isIdle())
+			{
+				 //Serial.println("Target " + (String)i + " still armed");
 				return false;
 			}
 		}
@@ -348,144 +402,321 @@ private:
 	}
 
 private:
-	int randomTargetIdx() {
+	int randomTargetIdx()
+	{
 		int newRandomTargetIdx = random(0L, targets.getSize());
-		return lastTargetIdx != newRandomTargetIdx ?
-				newRandomTargetIdx : randomTargetIdx();
-
+		return lastTargetIdx != newRandomTargetIdx ? newRandomTargetIdx : randomTargetIdx();
 	}
 
 private:
-	void armTarget(int idx) {
-		for (int i = 0; i < targets.getSize(); i++) {
-			targets.getValue(i)->unarm();
-			if (idx == i) {
-				targets.getValue(i)->arm();
+	void armTarget(int idx)
+	{
+		Serial.println("Arming target: " + (String)idx + " ...");
+		for (int i = 0; i < targets.getSize(); i++)
+		{
+			auto t = targets.getValue(i);
+			if (idx == i)
+			{
+				t->arm();
 				lastTargetIdx = idx;
-				Serial.println("Armed target: " + (String)i);
+				Serial.println("Group " + groupId + " Armed target: " + (String)i);
+			} else {
+				t->unarm();
 			}
 		}
 	}
 
 private:
-	void armTargetIncremental() {
+	void armTargetIncremental()
+	{
 		int newTargetIdx = lastTargetIdx == targets.getSize() ? 0 : lastTargetIdx + 1;
 		armTarget(newTargetIdx);
 	}
 
 private:
-	void armTargetRandom() {
+	void armTargetRandom()
+	{
 		int newRandomTarget = randomTargetIdx();
 		armTarget(newRandomTarget);
 	}
 
 private:
-	void armAll() {
-		for (int i = 0; i < targets.getSize(); i++) {
-			Serial.println("Armed target: " + (String)i);
+	void armAll()
+	{
+		for (int i = 0; i < targets.getSize(); i++)
+		{
+			Serial.println("Group " + groupId + " Armed target: " + (String)i);
 			targets.getValue(i)->arm();
 		}
 	}
 
-private: void updateAll() {
-			for (int i = 0; i < targets.getSize(); i++) {
-				targets.getValue(i)->Update();
+private:
+	void updateAll()
+	{
+		for (int i = 0; i < targets.getSize(); i++)
+		{
+	
+			auto t = targets.getValue(i);
+			if(t->id != "") {
+			//Serial.println("Group " + groupId + " updating target : " + (String)t->id);
+			t->Update();
+			}
+			else {
+				Serial.println("Group " + groupId + " INVALID index for target : " + (String)i);
 			}
 		}
+	}
 
-public: int score() {
+public:
+	int score()
+	{
 		int score = 0;
-		for (int i = 0; i < targets.getSize(); i++) {
+		for (int i = 0; i < targets.getSize(); i++)
+		{
 			score += targets.getValue(i)->hitCount;
 		}
 		return score;
 	}
 
-public: void update() {
+public:
+	void resetAll()
+	{
+		for (int i = 0; i < targets.getSize(); i++)
+		{
+			auto t = targets.getValue(i);
+				Serial.println("Game Group: " + groupId + " resetting: " + (String)t->id);
+			t->reset();
+		}
+	}
+
+public:
+	void update()
+	{
 		unsigned long currentMs = millis();
 
-		if (allIdle()) {
-			Serial.println("All idle");
+		if (allIdle())
+		{
+			Serial.println("All idle: Fame Mode " + gameModes[gameId]);
 		}
 
-		if (gameId == game_random_infinite) {
-			if (allIdle()) {
+		if (gameModes[gameId] == game_random_infinite)
+		{
+			if (allIdle())
+			{
 				armTargetRandom();
 			}
-		} else if (gameId == game_incremental_infinite) {
-			if (allIdle()) {
+		}
+		else if (gameModes[gameId] == game_incremental_infinite)
+		{
+			if (allIdle())
+			{
 				armTargetIncremental();
 			}
-		} else if (gameId == game_random_finite) {
-			if ((currentMs - previousMs) >= durationMs) {
-				armTargetIncremental();
-				previousMs = currentMs;
+		}
+		else if (gameModes[gameId] == game_random_finite)
+		{
+			if ((currentMs - previousMs) >= durationMs)
+			{
+				armTargetRandom();
+				previousMs = 0;
+				
 			}
-		} else if (gameId == game_incremental_finite) {
-			if ((currentMs - previousMs) >= durationMs) {
+			previousMs = currentMs;
+		}
+		else if (gameModes[gameId] == game_incremental_finite)
+		{
+			if ((currentMs - previousMs) >= durationMs)
+			{
 				armTargetIncremental();
-				previousMs = currentMs;
+				previousMs = 0;
 			}
-		} else {
-			if (allIdle()) {
+			previousMs = currentMs;
+		}
+		else
+		{
+			if (allIdle())
+			{
 				armAll();
 			}
 		}
 		updateAll();
-
 	}
 
-	void print() {
+	void print()
+	{
 		Serial.println("Game Group: " + groupId);
-		for (int i = 0; i < targets.getSize(); i++) {
+		for (int i = 0; i < targets.getSize(); i++)
+		{
 			auto t = targets.getValue(i);
 			Serial.println("Target: " + (t->id) + " Armed: " + (String)(t->isIdle()));
 		}
 	}
 };
 
-//Group A config
+// Group A config
 Buzzer buzzerA(buzzerPinA, 300, 1400);
 
 Flasher flasherA1(ledPinA1a, 100, 100);
 Light lightA1(ledPinA1b);
-Target *targetA1 = new Target("target-A-1", ldrPinA1, potPin, lightA1, flasherA1, buzzerA, 1000);
+Target *targetA1 = new Target("target-A-1", ldrPinA1, sensitivity, lightA1, flasherA1, buzzerA, 1000);
 
 Flasher flasherA2(ledPinA2a, 100, 100);
 Light lightA2(ledPinA2b);
-Target *targetA2 = new Target("target-B-1", ldrPinA2, potPin, lightA2, flasherA2, buzzerA, 1000);
+Target *targetA2 = new Target("target-A-2", ldrPinA2, sensitivity, lightA2, flasherA2, buzzerA, 1000);
 
-ButtonBoard * board;
-
-//Group B config
-// Buzzer buzzerB(buzzerPinB, 300, 1700);
-
-// Flasher flasherB1(ledPinB1a, 100, 100);
-// Light lightB1(ledPinB1b);
-// Target * targetB1("target-B-1", ldrPinB1, potPin, lightB1, flasherB1, buzzerB, 1000);
-
-//General settings
-String game_idx = game_random_infinite;
-int finitDurationdMsIn = 5000l;
+Flasher flasherA3(ledPinA3a, 100, 100);
+Light lightA3(ledPinA3b);
+Target * targetA3 = new Target("target-A-3", ldrPinA3, sensitivity, lightA3, flasherA3, buzzerA, 1000);
 
 
+TargetGroup *targetGroupA;
 
-TargetGroup * targetGroupA;
+// Group B config
+Buzzer buzzerB(buzzerPinB, 300, 1700);
 
-void configure(Key &key) {
-	if(key == up) {
-		sensitivity+=2;
-	} else if(key == down) {
-		sensitivity-=2;
-	}// else if(key == )
-}
+Flasher flasherB1(ledPinB1a, 100, 100);
+Light lightB1(ledPinB1b);
+Target *targetB1 = new Target("target-B-1", ldrPinB1, sensitivity, lightB1, flasherB1, buzzerB, 1000);
 
+TargetGroup *targetGroupB;
 
-void setup() {
+// Config
+ButtonBoard *board;
+
+enum Mode
+{
+	resetMode,
+	gameMode,
+	sensitivityMode,
+	finitDurationdMsMode
+};
+String ModesDesc[4] = {"reset", "game", "sens", "duration"};
+
+class Configurer
+{
+
+	boolean selectMode = false;
+	int modeId = 0;
+	String lastCommand = "none";
+
+public:
+	Mode mode = resetMode;
+
+	Mode nextMode()
+	{
+		if (modeId == sizeof(Mode))
+		{
+			modeId = 0;
+		}
+		else {
+			modeId++;
+		}
+		return static_cast<Mode>(modeId);
+	}
+
+	void reset() {
+Serial.println("Perform Reset");
+				targetGroupA->resetAll();
+				targetGroupB->resetAll();
+	}
+
+public:
+	void configure(Key &key)
+	{
+		boolean initialSelect = false;
+		if (key == select && !selectMode)
+		{
+			Serial.println("Entered select mode");
+			selectMode = true;
+			initialSelect = true;
+		}
+		if (selectMode && !initialSelect)
+		{
+			if (key == left || key == right)
+			{
+				mode = nextMode();
+				Serial.println("Chosen mode is " + ModesDesc[mode]);
+			}
+			else if (key == select)
+			{
+				selectMode = false;
+				Serial.println("Exit select mode");
+			}
+		}
+		else
+		{
+			if (mode == resetMode && (key == up || key == down))
+			{
+				reset();
+			}
+			if (mode == gameMode)
+			{
+				if (key == up)
+				{
+					if (sizeof(gameModes) - 1 == game_idx)
+					{
+						game_idx = 0;
+					}
+					else
+					{
+						game_idx++;
+					}
+				}
+				else if (key == down)
+				{
+					if (game_idx == 0)
+					{
+						game_idx = sizeof(gameModes) - 1;
+					}
+					else
+					{
+						game_idx--;
+					}
+				}
+					Serial.println("Change GameMode to " + gameModes[game_idx]);
+					reset();
+			}
+			else if (mode == sensitivityMode)
+			{
+				if (key == up)
+				{
+					sensitivity += 2;
+				}
+				else if (key == down)
+				{
+					sensitivity -= 2;
+				}
+				Serial.println("Change Senstivity to " + sensitivity);
+			}
+
+			else if (mode == finitDurationdMsMode)
+			{
+				if (key == up)
+				{
+					finitDurationdMs += 100;
+				}
+				else if (key == down)
+				{
+					finitDurationdMs -= 100;
+				}
+				Serial.println("Change finitDurationdM to " + finitDurationdMs);
+			}
+		}
+		
+	}
+};
+
+List<Target *> targetsA;
+List<Target *> targetsB;
+Configurer *configurer;
+
+void setup()
+{
 	Serial.begin(9600);
-	Serial.println("LaserGame " + game_idx + " initialization.");
+	Serial.println("LaserGame " + gameModes[game_idx] + " initialization.");
 
-	if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
+	if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+	{ // Address 0x3D for 128x64
 		Serial.println(F("SSD1306 allocation failed"));
 		for (;;)
 			;
@@ -493,43 +724,76 @@ void setup() {
 	delay(2000);
 	display.clearDisplay();
 	display.display();
+
 	
-	List<Target *> targetsA;
 	targetsA.add(targetA1);
 	targetsA.add(targetA2);
-	targetGroupA = new TargetGroup("Group-A", targetsA, game_idx, finitDurationdMsIn);
+	targetsA.add(targetA3);
+	targetGroupA = new TargetGroup("Group-A", targetsA, game_idx, finitDurationdMs);
 	targetGroupA->print();
-	// targetGroup1 = new TargetGroup(targets1, game_idx, finitDurationdMsIn);
-	//targetsv1.
 
-//	targetGroup1.targets.add(targetA1);
-//	targetGroup2.targets.add(target2);
+	
+	targetsB.add(targetB1);
+	// targetsB.add(targetB2);
+	targetGroupB = new TargetGroup("Group-B", targetsB, game_idx, finitDurationdMs);
+	targetGroupB->print();
 
-	Serial.println("Initialized targets");
+	// Configurer
+	configurer = new Configurer();
+	board = new ButtonBoard(keyboardPin, [](Key k) -> void
+							{ configurer->configure(k); });
 
+	Serial.println("Game initialized");
 
+	// targetGroup1.print();
+	// targets1.get(0.arm();
+	//	targetA1->arm();
+	//	targetA2->arm();
 
-board = new ButtonBoard(keyboardPin, [](Key k)-> void {
-  configure(k);
-  
-});
+	// lightA1.activate();
+	// flasherA1.activate();
+	// pinMode(ledPin, OUTPUT);
+	// pinMode(buzzerPin, OUTPUT);
+	// pinMode(ldrPin, INPUT);
+	//  pinMode( laserPin , OUTPUT);
+	//  digitalWrite( laserPin , HIGH);
 
-	//targetGroup1.print();
-	//targets1.get(0.arm();
-//	targetA1->arm();
-//	targetA2->arm();
+	Serial.println(F("Starting state of the memory:"));
+    Serial.println();
+    
+    MEMORY_PRINT_START
+    MEMORY_PRINT_HEAPSTART
+    MEMORY_PRINT_HEAPEND
+    MEMORY_PRINT_STACKSTART
+    MEMORY_PRINT_HEAPSIZE
 
+    Serial.println();
+    Serial.println();
+   
+    FREERAM_PRINT;
 
-	//lightA1.activate();
-	//flasherA1.activate();
-	//pinMode(ledPin, OUTPUT);
-	//pinMode(buzzerPin, OUTPUT);
-	//pinMode(ldrPin, INPUT);
-//  pinMode( laserPin , OUTPUT);
-//  digitalWrite( laserPin , HIGH);
+    byte *p = new byte[3000];    
+    
+    Serial.println();
+    Serial.println();
+    
+    Serial.println(F("Ending state of the memory:"));
+    Serial.println();
+    
+    MEMORY_PRINT_START
+    MEMORY_PRINT_HEAPSTART
+    MEMORY_PRINT_HEAPEND
+    MEMORY_PRINT_STACKSTART
+    MEMORY_PRINT_HEAPSIZE
+    
+    Serial.println();
+    Serial.println();
+    
+    FREERAM_PRINT;
 }
 
-void loop() {
+void loop()
+{
 
 	// for (int i = 0; i < targets1.getSize(); i++)
 	// {
@@ -546,35 +810,34 @@ void loop() {
 	// 	Serial.println("Target idle, re-arm");
 	// 	targets1.getValue(0)->arm();
 	// }
-	//lightA1.update();
-	//flasherA1.update();
-	//targetA1->Update();
-	//targetA2->Update();
-	
+	// lightA1.update();
+	// flasherA1.update();
+	// targetA1->Update();
+	// targetA2->Update();
+
 	targetGroupA->update();
+	//targetGroupB->update();
 	board->update();
-	
-	//targetGroup2.update();
+
+	// targetGroup2.update();
 	display.clearDisplay();
 
 	display.setTextSize(1);
 	display.setTextColor(WHITE);
 	display.setCursor(0, 5);
 	// Display static text
-	//analogRead(potPin);
-	display.println((String) "Sensitivity: " + sensitivity);
+	// analogRead(potPin);
+	display.println("Game: " + gameModes[game_idx] + " S: " + sensitivity);
 	display.setCursor(0, 15);
-	display.println("Game: " + game_idx);
-	display.setCursor(0, 30);
+	display.println(		(String) "A: " + targetGroupA->score() + " B: " + targetGroupB->score());
+	display.setCursor(0, 25);
 	display.println(
-			(String) "A: " + targetGroupA->score() + " B: "
-					+ targetGroupB->score());
+		(String) "Mode: " + ModesDesc[configurer->mode]);
 	display.display();
-//
-//	//TODO: reset
-//	if (sensitivity == 0) {
-//		targetA1.hitCount = 0;
-//		target2.hitCount = 0;
-//	}
-
+	//
+	//	//TODO: reset
+	//	if (sensitivity == 0) {
+	//		targetA1.hitCount = 0;
+	//		target2.hitCount = 0;
+	//	}
 }
