@@ -293,15 +293,15 @@ public:
 
 //Games
 //random target selection selected till hit
-const int game_random_infinite = 1;
+const String game_random_infinite = "random_infinite";
 //random target selection selected for limited amount of time
-const int game_random_finite = 2;
+const String game_random_finite = "random_finite";
 //incremental target selection selected till hit
-const int game_incremental_infinite = 3;
+const String game_incremental_infinite = "incremental_infinite";
 //incremental target selection selected for limited amount of time
-const int game_incremental_finite = 4;
+const String game_incremental_finite = "incremental_finite";
 //select all targets at once, reselect all when all hit
-const int game_all_together = 5;
+const String game_all_together = "all_together";
 
 /**
  * Represents a group of targets, which participate in a game
@@ -312,24 +312,26 @@ class TargetGroup {
 public:
 	List<Target *> targets;
 	int lastTargetIdx = -1;
-	int gameId;
+	String groupId;
+	String gameId;
 	long durationMs;     // milliseconds of on-time
 	unsigned long previousMs;   // will store last time Target was updated
 
 public:
-	TargetGroup(const List<Target *> &targets_, int gameId_, long duartionMs_) {
+	TargetGroup(String groupId_, const List<Target *> &targets_, String &gameId_, long duartionMs_) {
 //		for (int i = 0; i <= sizeof(targets_); i++) {
 //			targets.add(targets_[i]);
 //		}
 		targets = targets_;
 		gameId = gameId_;
+		groupId = groupId_;
 		durationMs = duartionMs_;
 		previousMs = 0;
 	}
 
 private:
 	boolean allIdle() {
-		for (int i = 0; i <= targets.getSize(); i++) {
+		for (int i = 0; i < targets.getSize(); i++) {
 			if (!targets.getValue(i)->isIdle()) {
 				//Serial.println("Target " + (String)i + " still armed");
 				return false;
@@ -348,7 +350,7 @@ private:
 
 private:
 	void armTarget(int idx) {
-		for (int i = 0; i <= targets.getSize(); i++) {
+		for (int i = 0; i < targets.getSize(); i++) {
 			targets.getValue(i)->unarm();
 			if (idx == i) {
 				targets.getValue(i)->arm();
@@ -372,21 +374,21 @@ private:
 
 private:
 	void armAll() {
-		for (int i = 0; i <= targets.getSize(); i++) {
+		for (int i = 0; i < targets.getSize(); i++) {
 			Serial.println("Armed target: " + (String)i);
 			targets.getValue(i)->arm();
 		}
 	}
 
 private: void updateAll() {
-			for (int i = 0; i <= targets.getSize(); i++) {
+			for (int i = 0; i < targets.getSize(); i++) {
 				targets.getValue(i)->Update();
 			}
 		}
 
 public: int score() {
 		int score = 0;
-		for (int i = 0; i <= targets.getSize(); i++) {
+		for (int i = 0; i < targets.getSize(); i++) {
 			score += targets.getValue(i)->hitCount;
 		}
 		return score;
@@ -426,12 +428,13 @@ public: void update() {
 
 	}
 
-//	void print() {
-//		for (int i = 0; i <= targets.getSize(); i++) {
-//			auto t = targets.getValue(i);
-//			Serial.println("Target: " + (t->id) + " Armed: " );
-//		}
-//	}
+	void print() {
+		Serial.println("Game Group: " + groupId);
+		for (int i = 0; i < targets.getSize(); i++) {
+			auto t = targets.getValue(i);
+			Serial.println("Target: " + (t->id) + " Armed: " + (String)(t->isIdle()));
+		}
+	}
 };
 
 //Group A config
@@ -454,23 +457,21 @@ Target *targetA2 = new Target("target-B-1", ldrPinA2, potPin, lightA2, flasherA2
 // Target * targetB1("target-B-1", ldrPinB1, potPin, lightB1, flasherB1, buzzerB, 1000);
 
 //General settings
-int game_idx = 20;//game_random_infinite;
+String game_idx = game_random_infinite;
 int finitDurationdMsIn = 5000l;
 
-List<Target *> targets1;
+List<Target *> targetsA;
 
 
 
 
-TargetGroup * targetGroup1;
-
-TargetGroup targetGroup2(targets1, game_idx, finitDurationdMsIn);
+TargetGroup * targetGroupA;
 
 
 
 void setup() {
 	Serial.begin(9600);
-	Serial.println("LaserGame Init");
+	Serial.println("LaserGame " + game_idx + " initialization.");
 
 	//Serial.begin(115200);
 
@@ -480,8 +481,10 @@ void setup() {
 			;
 	}
 	delay(2000);
-	targets1.add(targetA1);
-	targets1.add(targetA2);
+	targetsA.add(targetA1);
+	targetsA.add(targetA2);
+	targetGroupA = new TargetGroup("Group-A", targetsA, game_idx, finitDurationdMsIn);
+	targetGroupA->print();
 	// targetGroup1 = new TargetGroup(targets1, game_idx, finitDurationdMsIn);
 	//targetsv1.
 
@@ -492,7 +495,7 @@ void setup() {
 	//targetGroup1.print();
 	//targets1.get(0.arm();
 //	targetA1->arm();
-	targetA2->arm();
+//	targetA2->arm();
 
 
 	//lightA1.activate();
@@ -506,15 +509,15 @@ void setup() {
 
 void loop() {
 
-	for (int i = 0; i < targets1.getSize(); i++)
-	{
-		if (targets1.getValue(i)->isIdle())
-		{
-			Serial.println("Armed target: " + (String)i);
-			targets1.getValue(i)->arm();
-		}
-		targets1.getValue(i)->Update();
-	}
+	// for (int i = 0; i < targets1.getSize(); i++)
+	// {
+	// 	if (targets1.getValue(i)->isIdle())
+	// 	{
+	// 		Serial.println("Armed target: " + (String)i);
+	// 		targets1.getValue(i)->arm();
+	// 	}
+	// 	targets1.getValue(i)->Update();
+	// }
 
 	// targets1.getValue(0)->Update();
 	// if(targets1.getValue(0)->isIdle()) {
@@ -526,7 +529,7 @@ void loop() {
 	//targetA1->Update();
 	//targetA2->Update();
 	
-	//targetGroup1->update();
+	targetGroupA->update();
 	
 	//targetGroup2.update();
 //	display.clearDisplay();
