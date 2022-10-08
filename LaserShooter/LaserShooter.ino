@@ -38,13 +38,19 @@ const int ledPinA3b = 27;
 // Group B
 const int buzzerPinB = 7;
 
-const int ldrPinB1 = A3;
+const int ldrPinB1 = A4;
 const int ledPinB1a = 32;
 const int ledPinB1b = 33;
 
-const int potPin = A0;
+const int ldrPinB2 = A5;
+const int ledPinB2a = 34;
+const int ledPinB2b = 35;
 
-// const int laserPin = 7;
+const int ldrPinB3 = A6;
+const int ledPinB3a = 36;
+const int ledPinB3b = 37;
+
+const int potPin = A0;
 
 class Light
 {
@@ -607,6 +613,15 @@ Flasher flasherB1(ledPinB1a, 100, 100);
 Light lightB1(ledPinB1b);
 Target *targetB1 = new Target("target-B-1", ldrPinB1, sensitivity, lightB1, flasherB1, buzzerB, 1000);
 
+Flasher flasherB2(ledPinB2a, 100, 100);
+Light lightB2(ledPinB2b);
+Target *targetB2 = new Target("target-B-2", ldrPinB2, sensitivity, lightB2, flasherB2, buzzerB, 1000);
+
+Flasher flasherB3(ledPinB3a, 100, 100);
+Light lightB3(ledPinB3b);
+Target *targetB3 = new Target("target-B-3", ldrPinB3, sensitivity, lightB3, flasherB3, buzzerB, 1000);
+
+
 TargetGroup *targetGroupB;
 
 // Config
@@ -627,6 +642,8 @@ class Configurer
 	boolean selectMode = false;
 	int modeId = 0;
 	String lastCommand = "none";
+	TargetGroup * targetGroupA;
+	TargetGroup * targetGroupB;
 
 public:
 	Mode mode = resetMode;
@@ -634,11 +651,13 @@ public:
 	long finitDurationdMs;
 	int game_idx;
 
-	Configurer(int &game_idx_, int &sensitivity_, long &finitDurationdMs_)
+	Configurer(int &game_idx_, int &sensitivity_, long &finitDurationdMs_, TargetGroup * &targetGroupA_,	TargetGroup * &targetGroupB_)
 	{
 		game_idx = game_idx_;
 		sensitivity = sensitivity_;
 		finitDurationdMs = finitDurationdMs_;
+		targetGroupA = targetGroupA_;
+		targetGroupB = targetGroupB_;
 	}
 
 	Mode nextMode()
@@ -684,8 +703,8 @@ public:
 				Serial.println("Exit select mode");
 			}
 		}
-		else
-		{
+		
+		
 			if (mode == resetMode && (key == up || key == down))
 			{
 				reset();
@@ -748,7 +767,6 @@ public:
 				targetGroupA->setDuartionMs(finitDurationdMs);
 				targetGroupB->setDuartionMs(finitDurationdMs);
 			}
-		}
 	}
 };
 
@@ -778,12 +796,13 @@ void setup()
 	targetGroupA->print();
 
 	targetsB.add(targetB1);
-	// targetsB.add(targetB2);
+	targetsB.add(targetB2);
+	// targetsB.add(targetB3);
 	targetGroupB = new TargetGroup("Group-B", targetsB, game_idx, finitDurationdMs);
 	targetGroupB->print();
 
 	// Configurer
-	configurer = new Configurer(game_idx, sensitivity, finitDurationdMs);
+	configurer = new Configurer(game_idx, sensitivity, finitDurationdMs, targetGroupA, targetGroupB);
 	board = new ButtonBoard(keyboardPin, [](Key k) -> void
 							{ configurer->configure(k); });
 
@@ -855,7 +874,7 @@ void loop()
 	// targetA2->Update();
 
 	targetGroupA->update();
-	// targetGroupB->update();
+	targetGroupB->update();
 	board->update();
 
 	// targetGroup2.update();
