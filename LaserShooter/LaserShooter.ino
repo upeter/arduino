@@ -481,6 +481,8 @@ void setup() {
 			;
 	}
 	delay(2000);
+	display.clearDisplay();
+	display.display();
 	targetsA.add(targetA1);
 	targetsA.add(targetA2);
 	targetGroupA = new TargetGroup("Group-A", targetsA, game_idx, finitDurationdMsIn);
@@ -532,19 +534,21 @@ void loop() {
 	targetGroupA->update();
 	
 	//targetGroup2.update();
-//	display.clearDisplay();
-//
-//	display.setTextSize(1);
-//	display.setTextColor(WHITE);
-//	display.setCursor(0, 5);
-//	// Display static text
-//	int sensitivity = 20;//analogRead(potPin);
-//	display.println((String) "Sensitivity: " + sensitivity);
-//	display.setCursor(0, 15);
-////	display.println(
-////			(String) "Green: " + targetGroup1.score() + " Red: "
-////					+ targetGroup2.score());
-//	display.display();
+	display.clearDisplay();
+
+	display.setTextSize(1);
+	display.setTextColor(WHITE);
+	display.setCursor(0, 5);
+	// Display static text
+	int sensitivity = 20;//analogRead(potPin);
+	display.println((String) "Sensitivity: " + sensitivity);
+	display.setCursor(0, 15);
+	display.println("Game: " + game_idx);
+	display.setCursor(0, 30);
+	// display.println(
+	// 		(String) "A: " + targetGroupA->score() + " B: "
+	// 				+ targetGroupB->score());
+	display.display();
 //
 //	//TODO: reset
 //	if (sensitivity == 0) {
