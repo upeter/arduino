@@ -889,13 +889,7 @@ void loop()
 	display.setCursor(0, 15);
 	display.println((String) "A: " + targetGroupA->score() + " B: " + targetGroupB->score());
 	display.setCursor(0, 25);
-	display.println(
-		(String) "Mode: " + ModesDesc[configurer->mode]);
+	display.println("Mode: " + ModesDesc[configurer->mode]);
 	display.display();
-	//
-	//	//TODO: reset
-	//	if (sensitivity == 0) {
-	//		targetA1.hitCount = 0;
-	//		target2.hitCount = 0;
-	//	}
+
 }
