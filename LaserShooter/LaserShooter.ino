@@ -35,20 +35,28 @@ const int ldrPinA3 = A3;
 const int ledPinA3a = 26;
 const int ledPinA3b = 27;
 
+const int ldrPinA4 = A4;
+const int ledPinA4a = 28;
+const int ledPinA4b = 29;
+
 // Group B
 const int buzzerPinB = 7;
 
-const int ldrPinB1 = A4;
+const int ldrPinB1 = A5;
 const int ledPinB1a = 32;
 const int ledPinB1b = 33;
 
-const int ldrPinB2 = A5;
+const int ldrPinB2 = A6;
 const int ledPinB2a = 34;
 const int ledPinB2b = 35;
 
-const int ldrPinB3 = A6;
+const int ldrPinB3 = A7;
 const int ledPinB3a = 36;
 const int ledPinB3b = 37;
+
+const int ldrPinB4 = A8;
+const int ledPinB4a = 38;
+const int ledPinB4b = 39;
 
 const int potPin = A0;
 
@@ -604,6 +612,11 @@ Flasher flasherA3(ledPinA3a, 100, 100);
 Light lightA3(ledPinA3b);
 Target *targetA3 = new Target("target-A-3", ldrPinA3, sensitivity, lightA3, flasherA3, buzzerA, 1000);
 
+Flasher flasherA4(ledPinA4a, 100, 100);
+Light lightA4(ledPinA4b);
+Target *targetA4 = new Target("target-A-4", ldrPinA4, sensitivity, lightA4, flasherA4, buzzerA, 1000);
+
+
 TargetGroup *targetGroupA;
 
 // Group B config
@@ -621,6 +634,9 @@ Flasher flasherB3(ledPinB3a, 100, 100);
 Light lightB3(ledPinB3b);
 Target *targetB3 = new Target("target-B-3", ldrPinB3, sensitivity, lightB3, flasherB3, buzzerB, 1000);
 
+Flasher flasherB4(ledPinB4a, 100, 100);
+Light lightB4(ledPinB4b);
+Target *targetB4 = new Target("target-B-4", ldrPinB4, sensitivity, lightB4, flasherB4, buzzerB, 1000);
 
 TargetGroup *targetGroupB;
 
@@ -629,29 +645,27 @@ ButtonBoard *board;
 
 enum Mode
 {
-	resetMode,
 	gameMode,
 	sensitivityMode,
 	finitDurationdMsMode
 };
-String ModesDesc[4] = {"reset", "game", "sens", "duration"};
+String ModesDesc[4] = {"game", "sens", "duration"};
 
 class Configurer
 {
 
 	boolean selectMode = false;
 	int modeId = 0;
-	String lastCommand = "none";
 	TargetGroup * targetGroupA;
 	TargetGroup * targetGroupB;
 
 public:
-	Mode mode = resetMode;
+	Mode mode = gameMode;
 	int sensitivity;
 	long finitDurationdMs;
 	int game_idx;
 
-	Configurer(int &game_idx_, int &sensitivity_, long &finitDurationdMs_, TargetGroup * &targetGroupA_,	TargetGroup * &targetGroupB_)
+	Configurer(int &game_idx_, int &sensitivity_, long &finitDurationdMs_, TargetGroup * &targetGroupA_, TargetGroup * &targetGroupB_)
 	{
 		game_idx = game_idx_;
 		sensitivity = sensitivity_;
@@ -662,13 +676,10 @@ public:
 
 	Mode nextMode()
 	{
-		if (modeId == sizeof(Mode))
+		modeId++;
+		if (modeId == (sizeof(Mode) + 1))
 		{
 			modeId = 0;
-		}
-		else
-		{
-			modeId++;
 		}
 		return static_cast<Mode>(modeId);
 	}
@@ -683,90 +694,68 @@ public:
 public:
 	void configure(Key &key)
 	{
-		boolean initialSelect = false;
-		if (key == select && !selectMode)
+		if (key == select)
 		{
-			Serial.println("Entered select mode");
-			selectMode = true;
-			initialSelect = true;
+			reset();
 		}
-		if (selectMode && !initialSelect)
+		else if (mode == gameMode)
 		{
-			if (key == left || key == right)
+			if (key == up)
 			{
-				mode = nextMode();
-				Serial.println("Chosen mode is " + ModesDesc[mode]);
+				if (sizeof(gameModes) - 1 == game_idx)
+				{
+					game_idx = 0;
+				}
+				else
+				{
+					game_idx++;
+				}
 			}
-			else if (key == select)
+			else if (key == down)
 			{
-				selectMode = false;
-				Serial.println("Exit select mode");
+				if (game_idx == 0)
+				{
+					game_idx = sizeof(gameModes) - 1;
+				}
+				else
+				{
+					game_idx--;
+				}
 			}
+			Serial.println("Change GameMode to " + gameModes[game_idx]);
+			targetGroupA->setGameId(game_idx);
+			targetGroupB->setGameId(game_idx);
+			reset();
 		}
-		
-		
-			if (mode == resetMode && (key == up || key == down))
+		else if (mode == sensitivityMode)
+		{
+			if (key == up)
 			{
-				reset();
+				sensitivity += 2;
 			}
-			if (mode == gameMode)
+			else if (key == down)
 			{
-				if (key == up)
-				{
-					if (sizeof(gameModes) - 1 == game_idx)
-					{
-						game_idx = 0;
-					}
-					else
-					{
-						game_idx++;
-					}
-				}
-				else if (key == down)
-				{
-					if (game_idx == 0)
-					{
-						game_idx = sizeof(gameModes) - 1;
-					}
-					else
-					{
-						game_idx--;
-					}
-				}
-				Serial.println("Change GameMode to " + gameModes[game_idx]);
-				targetGroupA->setGameId(game_idx);
-				targetGroupB->setGameId(game_idx);
-				reset();
+				sensitivity -= 2;
 			}
-			else if (mode == sensitivityMode)
-			{
-				if (key == up)
-				{
-					sensitivity += 2;
-				}
-				else if (key == down)
-				{
-					sensitivity -= 2;
-				}
-				Serial.println("Change Senstivity to " + sensitivity);
-				targetGroupA->setSensitivity(sensitivity);
-				targetGroupB->setSensitivity(sensitivity);
-			}
+			Serial.println("Change Senstivity to " + sensitivity);
+			targetGroupA->setSensitivity(sensitivity);
+			targetGroupB->setSensitivity(sensitivity);
+		}
 
-			else if (mode == finitDurationdMsMode)
+		else if (mode == finitDurationdMsMode)
+		{
+			if (key == up)
 			{
-				if (key == up)
-				{
-					finitDurationdMs += 100;
-				}
-				else if (key == down)
-				{
-					finitDurationdMs -= 100;
-				}
-				Serial.println("Change finitDurationdM to " + finitDurationdMs);
-				targetGroupA->setDuartionMs(finitDurationdMs);
-				targetGroupB->setDuartionMs(finitDurationdMs);
+				finitDurationdMs += 100;
 			}
+			else if (key == down)
+			{
+				finitDurationdMs -= 100;
+			}
+			Serial.println("Change finitDurationdM to " + finitDurationdMs);
+			targetGroupA->setDuartionMs(finitDurationdMs);
+			targetGroupB->setDuartionMs(finitDurationdMs);
+		}
 	}
 };
 
@@ -792,12 +781,14 @@ void setup()
 	targetsA.add(targetA1);
 	targetsA.add(targetA2);
 	targetsA.add(targetA3);
+	//targetsA.add(targetA4);
 	targetGroupA = new TargetGroup("Group-A", targetsA, game_idx, finitDurationdMs);
 	targetGroupA->print();
 
 	targetsB.add(targetB1);
 	targetsB.add(targetB2);
-	// targetsB.add(targetB3);
+	//targetsB.add(targetB3);
+	//targetsB.add(targetB4);
 	targetGroupB = new TargetGroup("Group-B", targetsB, game_idx, finitDurationdMs);
 	targetGroupB->print();
 
@@ -808,46 +799,11 @@ void setup()
 
 	Serial.println("Game initialized");
 
-	// targetGroup1.print();
-	// targets1.get(0.arm();
 	//	targetA1->arm();
 	//	targetA2->arm();
 
 	// lightA1.activate();
 	// flasherA1.activate();
-
-	Serial.println(F("Starting state of the memory:"));
-	Serial.println();
-
-	MEMORY_PRINT_START
-	MEMORY_PRINT_HEAPSTART
-	MEMORY_PRINT_HEAPEND
-	MEMORY_PRINT_STACKSTART
-	MEMORY_PRINT_HEAPSIZE
-
-	Serial.println();
-	Serial.println();
-
-	FREERAM_PRINT;
-
-	byte *p = new byte[3000];
-
-	Serial.println();
-	Serial.println();
-
-	Serial.println(F("Ending state of the memory:"));
-	Serial.println();
-
-	MEMORY_PRINT_START
-	MEMORY_PRINT_HEAPSTART
-	MEMORY_PRINT_HEAPEND
-	MEMORY_PRINT_STACKSTART
-	MEMORY_PRINT_HEAPSIZE
-
-	Serial.println();
-	Serial.println();
-
-	FREERAM_PRINT;
 }
 
 void loop()
@@ -877,17 +833,14 @@ void loop()
 	targetGroupB->update();
 	board->update();
 
-	// targetGroup2.update();
+	//Display
 	display.clearDisplay();
-
 	display.setTextSize(1);
 	display.setTextColor(WHITE);
 	display.setCursor(0, 5);
-	// Display static text
-	// analogRead(potPin);
 	display.println("Game: " + gameModes[configurer->game_idx] + " S: " + configurer->sensitivity);
 	display.setCursor(0, 15);
-	display.println((String) "A: " + targetGroupA->score() + " B: " + targetGroupB->score());
+	display.println((String) "Score A: " + targetGroupA->score() + " B: " + targetGroupB->score());
 	display.setCursor(0, 25);
 	display.println("Mode: " + ModesDesc[configurer->mode]);
 	display.display();
