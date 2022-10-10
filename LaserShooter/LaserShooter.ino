@@ -4,7 +4,6 @@
 #include <Adafruit_SSD1306.h>
 #include <List.hpp>
 #include "Utilities.cpp"
-#include <MemoryUsage.h>
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
@@ -18,7 +17,7 @@ long finitDurationdMs = 5000;
 int game_idx = 0;
 
 // Button board
-const int keyboardPin = A8;
+const int keyboardPin = A10;
 
 // Group A
 const int buzzerPinA = 4;
@@ -698,8 +697,12 @@ public:
 		{
 			reset();
 		}
+		else if (key == right || key == left) {
+			mode = nextMode();
+		}
 		else if (mode == gameMode)
 		{
+			int currentGameIdx = game_idx;
 			if (key == up)
 			{
 				if (sizeof(gameModes) - 1 == game_idx)
@@ -722,13 +725,16 @@ public:
 					game_idx--;
 				}
 			}
-			Serial.println("Change GameMode to " + gameModes[game_idx]);
-			targetGroupA->setGameId(game_idx);
-			targetGroupB->setGameId(game_idx);
+			if(currentGameIdx != game_idx) {
+				Serial.println("Change GameMode to " + gameModes[game_idx]);
+				targetGroupA->setGameId(game_idx);
+				targetGroupB->setGameId(game_idx);
 			reset();
+			}
 		}
 		else if (mode == sensitivityMode)
 		{
+			int currentSensitivity = sensitivity;
 			if (key == up)
 			{
 				sensitivity += 2;
@@ -737,13 +743,16 @@ public:
 			{
 				sensitivity -= 2;
 			}
-			Serial.println("Change Senstivity to " + sensitivity);
-			targetGroupA->setSensitivity(sensitivity);
-			targetGroupB->setSensitivity(sensitivity);
+			if(currentSensitivity != sensitivity) {
+				Serial.println("Change Senstivity to " + sensitivity);
+				targetGroupA->setSensitivity(sensitivity);
+				targetGroupB->setSensitivity(sensitivity);
+			}
 		}
 
 		else if (mode == finitDurationdMsMode)
 		{
+			long currentFinitDurationdMsMode = finitDurationdMs;
 			if (key == up)
 			{
 				finitDurationdMs += 100;
@@ -752,9 +761,11 @@ public:
 			{
 				finitDurationdMs -= 100;
 			}
-			Serial.println("Change finitDurationdM to " + finitDurationdMs);
-			targetGroupA->setDuartionMs(finitDurationdMs);
-			targetGroupB->setDuartionMs(finitDurationdMs);
+			if(currentFinitDurationdMsMode != finitDurationdMs) {
+				Serial.println("Change finitDurationdM to " + finitDurationdMs);
+				targetGroupA->setDuartionMs(finitDurationdMs);
+				targetGroupB->setDuartionMs(finitDurationdMs);
+			}
 		}
 	}
 };
