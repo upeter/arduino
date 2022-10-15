@@ -47,18 +47,18 @@ public:
     {
       if (Key_read > 160 and Key_read < 180)
       {
-        Serial.println("RIGHT (" + (String)Key_read + ")");
-        buttonClicked(right);
+        Serial.println("LEFT (" + (String)Key_read + ")");
+        buttonClicked(left);
       }
       else if (Key_read > 25 and Key_read < 60)
       {
-        Serial.println("UP (" + (String)Key_read + ")");
-        buttonClicked(up);
+        Serial.println("DOWN (" + (String)Key_read + ")");
+        buttonClicked(down);
       }
       else if (Key_read > 80 and Key_read < 120)
       {
-        Serial.println("DOWN (" + (String)Key_read + ")");
-        buttonClicked(down);
+        Serial.println("UP (" + (String)Key_read + ")");
+        buttonClicked(up);
       }
       else if (Key_read > 340 and Key_read < 370)
       {
@@ -67,8 +67,8 @@ public:
       }
       else if (Key_read < 15)
       {
-        Serial.println("LEFT (" + (String)Key_read + ")");
-        buttonClicked(left);
+        Serial.println("RIGHT (" + (String)Key_read + ")");
+        buttonClicked(right);
       }
       else
       {
