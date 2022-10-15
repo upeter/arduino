@@ -13,7 +13,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 // General settings
 int sensitivity = 20;
-int sensitivityDiff = 15;
+int sensitivityDiff = 20;
+int winningScore = 20;
 long finitDurationdMs = 2500;
 int game_idx = 0;
 
@@ -284,6 +285,7 @@ public:
 	void unarm()
 	{
 		isArmed = false;
+		isHit = false;
 		light.deactivate();
 		light.update();
 		flasher.deactivate();
@@ -300,7 +302,7 @@ public:
 
 	void reset()
 	{
-		Serial.println("Reset Target: " + (String)id);
+		//Serial.println("Reset Target: " + (String)id);
 		hitCount = 0;
 		unarm();
 	}
@@ -364,9 +366,9 @@ public:
 				}
 			}
 			light.update();
-			flasher.update();
 			buzzer.update();
 		}
+		flasher.update();
 	}
 };
 
@@ -397,6 +399,9 @@ public:
 	int gameId;
 	long durationMs;		  // milliseconds of on-time
 	unsigned long previousMs; // will store last time Target was updated
+	boolean isEnded;
+	boolean hasWon;
+	boolean stopped;
 
 public:
 	TargetGroup(String groupId_, const List<Target *> &targets_, int &gameId_, long &duartionMs_)
@@ -409,6 +414,9 @@ public:
 		groupId = groupId_;
 		durationMs = duartionMs_;
 		previousMs = 0;
+		isEnded = false;
+		hasWon = false;
+		stopped = false;
 	}
 
 private:
@@ -456,25 +464,59 @@ private:
 private:
 	void armTargetIncremental()
 	{
+		// Serial.println("Group " + (String)groupId + " Armed targets incremental");
+		// Serial.println("============================================");
 		int newTargetIdx = lastTargetIdx == (targets.getSize() - 1) ? 0 : lastTargetIdx + 1;
 		armTarget(newTargetIdx);
+//		Serial.println("============================================");
 	}
 
 private:
 	void armTargetRandom()
 	{
+		// Serial.println("Group " + (String)groupId + " Armed targets random");
+		// Serial.println("============================================");
 		int newRandomTarget = randomTargetIdx();
 		armTarget(newRandomTarget);
+		// Serial.println("============================================");
 	}
 
 private:
 	void armAll()
 	{
+		// Serial.println("Group " + (String)groupId + " Armed targets");
+		// Serial.println("============================================");
 		for (int i = 0; i < targets.getSize(); i++)
 		{
 			Serial.println("Group " + (String)groupId + " Armed target: " + (String)i);
 			targets.getValue(i)->arm();
 		}
+		// Serial.println("============================================");
+
+	}
+
+private:
+	void flashAll()
+	{
+		for (int i = 0; i < targets.getSize(); i++)
+		{
+			targets.getValue(i)->flasher.activate();
+		}
+	}
+
+
+private:
+	void unarmAll()
+	{
+		// Serial.println("Group " + (String)groupId + " Unarm targets");
+		// Serial.println("============================================");
+		for (int i = 0; i < targets.getSize(); i++)
+		{
+			Serial.println("Group " + (String)groupId + " Unarmed target: " + (String)i);
+			targets.getValue(i)->unarm();
+		}
+		// Serial.println("============================================");
+
 	}
 
 private:
@@ -510,12 +552,20 @@ public:
 public:
 	void resetAll()
 	{
+		// Serial.println("Group " + (String)groupId + " Reset targets");
+		// Serial.println("============================================");		
+		isEnded = false;
+		hasWon = false;
+		stopped = false;
 		for (int i = 0; i < targets.getSize(); i++)
 		{
 			auto t = targets.getValue(i);
 			Serial.println("Group: " + (String)groupId + " resetting: " + (String)t->id);
 			t->reset();
+		
 		}
+		//Serial.println("============================================");
+
 	}
 
 public:
@@ -541,9 +591,24 @@ public:
 	}
 
 public:
+	void endGame(boolean isEnded_, boolean &hasWon_) {
+		isEnded = isEnded_;
+		hasWon = hasWon_;
+	}
+
+public:
 	void update()
 	{
 		unsigned long currentMs = millis();
+		if(isEnded) {
+			if(!stopped) {
+				unarmAll();
+				if(hasWon) {
+					flashAll();
+				}
+				stopped = true;
+			}
+		} else {
 
 		if (allIdle())
 		{
@@ -588,6 +653,7 @@ public:
 				armAll();
 			}
 		}
+		}
 		updateAll();
 	}
 
@@ -599,6 +665,70 @@ public:
 			auto t = targets.getValue(i);
 			Serial.println("Target: " + (t->id) + " Armed: " + (String)(t->isIdle()));
 		}
+	}
+};
+
+class Game
+{
+	TargetGroup *targetGroupA;
+	TargetGroup *targetGroupB;
+	int &winningScore;
+	
+	public: Game(TargetGroup *targetGroupA_, TargetGroup *targetGroupB_, int &winningScore_)
+	{
+		targetGroupA = targetGroupA_;
+		targetGroupB = targetGroupB_;
+		winningScore = winningScore_;
+	}
+
+	public:
+	void update() {
+		
+		//when winning score is 0,the game is infiniate
+		if(winningScore != 0) {
+			auto winA = targetGroupA->score() >= winningScore;
+			auto winB = targetGroupB->score() >= winningScore;
+			if(winA || winB) {
+				Serial.println("Game Ended!!!: A win: " + (String)winA + " B win: " + (String)winB);
+				targetGroupA->endGame(true, winA);
+				targetGroupB->endGame(true, winB);
+			}
+		}
+		targetGroupA->update();
+		targetGroupB->update();
+	}
+
+	public:
+	void setWinningScore(int &winningScore_) {
+		winningScore = winningScore_;
+
+	}
+
+	public:
+	void setGameId(int &game_idx) {
+				targetGroupA->setGameId(game_idx);
+				targetGroupB->setGameId(game_idx);
+	}
+
+public:
+	void setSensitivityA(int &sensitivity) {
+				targetGroupA->setSensitivity(sensitivity);
+	}
+
+	void setSensitivityB(int &sensitivity) {
+				targetGroupB->setSensitivity(sensitivity);
+	}
+
+	public:
+	void setDuartionMs(long &duarationMs) {
+				targetGroupA->setDuartionMs(duarationMs);
+				targetGroupB->setDuartionMs(duarationMs);
+	}
+
+public:
+	void reset() {
+				targetGroupA->resetAll();
+				targetGroupB->resetAll();
 	}
 };
 
@@ -653,33 +783,34 @@ enum Mode
 	gameMode,
 	sensitivityMode,
 	sensitivityDiffMode,
+	winningScoreMode,
 	finitDurationdMsMode
 };
-String ModesDesc[4] = {"game", "sens", "sensDiff", "duration"};
+String ModesDesc[5] = {"game", "sens", "sensDiff", "winScore", "duration"};
 
 class Configurer
 {
 
 	boolean selectMode = false;
 	int modeId = 0;
-	TargetGroup * targetGroupA;
-	TargetGroup * targetGroupB;
+	Game * game;
 
 public:
 	Mode mode = gameMode;
 	int sensitivity;
 	int sensitivityDiff;
+	int winningScore;
 	long finitDurationdMs;
 	int game_idx;
 
-	Configurer(int &game_idx_, int &sensitivity_, int &sensitivityDiff_, long &finitDurationdMs_, TargetGroup * &targetGroupA_, TargetGroup * &targetGroupB_)
+	Configurer(int &game_idx_, int &sensitivity_, int &sensitivityDiff_, int &winningScore_, long &finitDurationdMs_, Game * &game_)
 	{
 		game_idx = game_idx_;
 		sensitivity = sensitivity_;
 		sensitivityDiff = sensitivityDiff_;
+		winningScore = winningScore_;
 		finitDurationdMs = finitDurationdMs_;
-		targetGroupA = targetGroupA_;
-		targetGroupB = targetGroupB_;
+		game = game_;
 	}
 
 	Mode nextMode()
@@ -692,12 +823,6 @@ public:
 		return static_cast<Mode>(modeId);
 	}
 
-	void reset()
-	{
-		Serial.println("Perform Reset");
-		targetGroupA->resetAll();
-		targetGroupB->resetAll();
-	}
 
 public:
 	String modeValue() {
@@ -708,9 +833,11 @@ public:
 			value = "" + (String)sensitivity;
 		} else if(mode == sensitivityDiffMode) {
 			value = "" + (String)sensitivityDiff;
+		} else if(mode == winningScoreMode) {
+			value = "" + (String)winningScore;
 		} else if(mode == finitDurationdMsMode) {
 			value = "" + (String)finitDurationdMs;
-		}
+		} 
 		return ModesDesc[mode] + " " + value + "";
 	}
 
@@ -719,7 +846,7 @@ public:
 	{
 		if (key == select)
 		{
-			reset();
+			game->reset();
 		}
 		else if (key == right || key == left) {
 			mode = nextMode();
@@ -752,10 +879,10 @@ public:
 				}
 			}
 			if(currentGameIdx != game_idx) {
+
 				Serial.println("Change GameMode to " + (String)gameModes[game_idx]);
-				targetGroupA->setGameId(game_idx);
-				targetGroupB->setGameId(game_idx);
-			reset();
+				game->setGameId(game_idx);
+				game->reset();
 			}
 		}
 		else if (mode == sensitivityMode)
@@ -773,8 +900,9 @@ public:
 				int sensitivityB = sensitivity + sensitivityDiff;
 				Serial.println("Change Senstivity A to " + (String)sensitivity);
 				Serial.println("Change Senstivity B to " + (String)sensitivityB);
-				targetGroupA->setSensitivity(sensitivity);
-				targetGroupB->setSensitivity(sensitivityB);
+				
+				game->setSensitivityA(sensitivity);
+				game->setSensitivityB(sensitivityB);
 			}
 		}
 
@@ -793,11 +921,30 @@ public:
 				int sensitivityB = sensitivity + sensitivityDiff;
 				Serial.println("Change Senstivity A to " + (String)sensitivity);
 				Serial.println("Change Senstivity B to " + (String)sensitivityB);
-				targetGroupA->setSensitivity(sensitivity);
-				targetGroupB->setSensitivity(sensitivityB);
+				game->setSensitivityA(sensitivity);
+				game->setSensitivityB(sensitivityB);
 			}
 		}
-
+		else if (mode == winningScoreMode)
+		{
+			int currentWinningScore = winningScore;
+			if (key == up)
+			{
+				winningScore += 1;
+			}
+			else if (key == down)
+			{
+				if(winningScore <= 0) {
+					winningScore = 0;
+				} else {
+				 	winningScore -= 1;
+				}
+			}
+			if(currentWinningScore != winningScore) {
+				Serial.println("Change winning Socreto " + (String)winningScore);
+				game->setWinningScore(winningScore);
+			}
+		}
 		else if (mode == finitDurationdMsMode)
 		{
 			long currentFinitDurationdMsMode = finitDurationdMs;
@@ -811,8 +958,7 @@ public:
 			}
 			if(currentFinitDurationdMsMode != finitDurationdMs) {
 				Serial.println("Change finitDurationdM to " + (String)finitDurationdMs);
-				targetGroupA->setDuartionMs(finitDurationdMs);
-				targetGroupB->setDuartionMs(finitDurationdMs);
+				game->setDuartionMs(finitDurationdMs);
 			}
 		}
 	}
@@ -821,6 +967,7 @@ public:
 List<Target *> targetsA;
 List<Target *> targetsB;
 Configurer *configurer;
+Game *game;
 
 void setup()
 {
@@ -851,8 +998,10 @@ void setup()
 	targetGroupB = new TargetGroup("Group-B", targetsB, game_idx, finitDurationdMs);
 	targetGroupB->print();
 
+	game = new Game(targetGroupA, targetGroupB, winningScore);
+
 	// Configurer
-	configurer = new Configurer(game_idx, sensitivity, sensitivityDiff, finitDurationdMs, targetGroupA, targetGroupB);
+	configurer = new Configurer(game_idx, sensitivity, sensitivityDiff, winningScore, finitDurationdMs, game);
 	board = new ButtonBoard(keyboardPin, [](Key k) -> void
 							{ configurer->configure(k); });
 
@@ -888,8 +1037,7 @@ void loop()
 	// targetA1->Update();
 	// targetA2->Update();
 
-	targetGroupA->update();
-	targetGroupB->update();
+	game->update();
 	board->update();
 
 	//Display
